@@ -1,0 +1,118 @@
+/* ===================================================================
+   Factory Simulator - 다크 테마 레이아웃
+   - 색상은 모두 CSS 변수로 관리한다 (테마 변경·시연 색상 튜닝 용이)
+   - 레이아웃은 CSS Grid 한 컨테이너로:
+       [ toolbar    toolbar    ]  50px
+       [ canvas     side-panel ]  1fr
+       [ statusbar  statusbar  ]  30px
+       └ 1fr ──────┘ 320px
+   =================================================================== */
+
+:root {
+  --bg-darkest: #14181f;
+  --bg-dark: #1a1f28;
+  --bg-canvas: #0f1419;
+  --panel: #1a1f28;
+  --border: #2a2f3a;
+  --text: #e5e7eb;
+  --text-muted: #9ca3af;
+  --accent: #6b9bd8;
+
+  --toolbar-height: 50px;
+  --statusbar-height: 30px;
+  --side-panel-width: 320px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-darkest);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+  font-size: 14px;
+}
+
+body {
+  /* 전체 페이지를 toolbar / main / statusbar 3행으로 구성 */
+  display: grid;
+  grid-template-rows: var(--toolbar-height) 1fr var(--statusbar-height);
+  height: 100vh;
+}
+
+/* ---------- 상단 툴바 ---------- */
+#toolbar {
+  background: var(--bg-dark);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+#toolbar .title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--text);
+}
+
+#toolbar .toolbar-right {
+  display: flex;
+  gap: 8px;
+  /* 이후 단계의 버튼들이 여기에 배치된다 */
+}
+
+/* ---------- 메인 영역 (캔버스 + 사이드 패널) ---------- */
+#main {
+  display: grid;
+  grid-template-columns: 1fr var(--side-panel-width);
+  overflow: hidden;
+  min-height: 0; /* grid에서 자식 overflow 작동시키기 위함 */
+}
+
+#canvas-container {
+  position: relative;
+  background: var(--bg-canvas);
+  overflow: hidden;
+}
+
+#canvas-container canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------- 우측 KPI 패널 ---------- */
+#side-panel {
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.panel-placeholder {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 24px 0;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+}
+
+/* ---------- 하단 상태바 ---------- */
+#statusbar {
+  background: var(--bg-darkest);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+}

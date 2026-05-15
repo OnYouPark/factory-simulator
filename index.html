@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Factory Simulator</title>
+  <link rel="stylesheet" href="assets/style.css" />
+
+  <!-- Three.js는 jsdelivr CDN을 통해 ES Module로 로딩한다.
+       importmap을 쓰면 main.js에서 `from 'three'`처럼 깔끔하게 import 가능. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <!-- 상단 툴바: 좌측에 제목, 우측은 이후 컨트롤 버튼을 위한 빈 자리 -->
+  <header id="toolbar">
+    <div class="toolbar-left">
+      <span class="title">Factory Simulator</span>
+    </div>
+    <div class="toolbar-right">
+      <!-- 이후 단계: 시작/일시정지, 속도 슬라이더, 카메라 프리셋 등 -->
+    </div>
+  </header>
+
+  <!-- 메인 영역: 좌측 3D 캔버스 + 우측 KPI 대시보드 패널 -->
+  <main id="main">
+    <div id="canvas-container">
+      <!-- scene.js에서 생성한 renderer.domElement가 이 안에 append 된다 -->
+    </div>
+    <aside id="side-panel">
+      <div class="panel-placeholder">KPI Dashboard</div>
+    </aside>
+  </main>
+
+  <!-- 하단 상태바: 시뮬레이션 상태(Idle/Running/Paused) 표시 -->
+  <footer id="statusbar">
+    <span>Status: Idle</span>
+  </footer>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
