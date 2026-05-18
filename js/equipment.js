@@ -10,7 +10,22 @@
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
-import { EQUIPMENT, EQUIPMENT_RENDER } from './config.js';
+import { EQUIPMENT, EQUIPMENT_RENDER, PART_COLORS } from './config.js';
+
+// ---------- 상태별 emissive 색상 ----------
+// 시뮬레이션 status를 한눈에 식별하도록 emissive 색상으로 표시한다.
+//   - idle:       어두운 회색 (사실상 변화 없음)
+//   - processing: 부품 색을 30% 밝기로 emissive (생산 중인 부품 색 힌트)
+//   - blocked:    빨강. 1Hz 깜박임 (출력 큐 가득 → 멈춰 있음)
+//   - starved:    회색 (입력 부족으로 대기)
+const STATUS_EMISSIVE = {
+  blocked: 0xC0392B,
+  starved: 0x6b7280,
+};
+const PROCESSING_EMISSIVE_FACTOR = 0.30;  // 부품 색을 어둡게 해서 은은한 발광 느낌
+const BLINK_HZ = 1;                       // blocked 깜박임 주기 (초당 회수)
+// 깜박임 위상 누적용 모듈 변수 — updateEquipmentVisuals 호출 사이에 유지된다.
+let _blinkPhase = 0;
 
 /**
  * 모든 장비를 씬에 추가한다.
@@ -79,6 +94,64 @@ export function createEquipmentMesh(data) {
   mesh.add(label);
 
   return { mesh, label };
+}
+
+/**
+ * 매 프레임 호출되어 각 장비 메쉬의 emissive를 station.status 에 따라 갱신한다.
+ *
+ * 메쉬 자체는 건드리지 않고(geometry·base color 유지) emissive만 조작하므로
+ * 외형은 그대로 두고 상태 정보만 시각화한다.
+ *
+ * @param {Array<{id, data, mesh}>} equipmentList - buildEquipment 결과
+ * @param {Map<string, import('./simulation.js').Station>} stations
+ * @param {number} realDeltaSeconds - 실제 시간 경과 (깜박임 위상용; timeScale 영향 안 받음)
+ */
+export function updateEquipmentVisuals(equipmentList, stations, realDeltaSeconds = 0) {
+  _blinkPhase = (_blinkPhase + realDeltaSeconds * BLINK_HZ) % 1;
+  // 깜박임 강도: 0~1 사인파 (0.4 ~ 1.0 범위로 보정해 너무 꺼지지 않게)
+  const blinkIntensity = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(_blinkPhase * Math.PI * 2));
+
+  for (const item of equipmentList) {
+    const station = stations.get(item.id);
+    if (!station) continue;  // 시뮬레이션 station이 없는 장비는 스킵 (현재는 없음)
+    const mat = item.mesh.material;
+
+    switch (station.status) {
+      case 'processing': {
+        // 현재 처리 중인 부품의 색을 어둡게 해서 emissive로 사용.
+        // injection/supply 는 partType 색, 그 외(surface/assembly/shipping)는
+        // currentItem.type 색 — assembly 처리 중에는 'completed' 색이 들어감.
+        const partType = station.currentItem?.type || station.partType;
+        const baseColor = PART_COLORS[partType];
+        if (baseColor !== undefined) {
+          mat.emissive.setHex(baseColor);
+          mat.emissiveIntensity = PROCESSING_EMISSIVE_FACTOR;
+        } else {
+          // partType이 없는 station(없을 가능성 낮음)은 옅은 흰빛
+          mat.emissive.setHex(0x444444);
+          mat.emissiveIntensity = PROCESSING_EMISSIVE_FACTOR;
+        }
+        break;
+      }
+      case 'blocked': {
+        mat.emissive.setHex(STATUS_EMISSIVE.blocked);
+        mat.emissiveIntensity = blinkIntensity;  // 깜박임
+        break;
+      }
+      case 'starved': {
+        mat.emissive.setHex(STATUS_EMISSIVE.starved);
+        mat.emissiveIntensity = 0.5;
+        break;
+      }
+      case 'idle':
+      default: {
+        // 원래 색상 복귀 — emissive를 검정으로 두면 base color만 보인다.
+        mat.emissive.setHex(0x000000);
+        mat.emissiveIntensity = 0;
+        break;
+      }
+    }
+  }
 }
 
 /**

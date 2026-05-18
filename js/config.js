@@ -199,13 +199,36 @@ export const ROUTES = [
 ];
 
 // AGV 공통 파라미터
+// - 큐 연동(Stage 4) 도입 이후 대기 시간은 큐 처리 신호를 기다리는 의미로
+//   바뀌었기 때문에 시각적 자연스러움만 유지할 수 있을 만큼 짧게 축소했다.
 export const AGV = {
   speed: 3.0,           // m/s
-  pickupWaitTime: 2.0,  // 픽업 지점 대기 시간 (초)
-  dropoffWaitTime: 2.0, // 드롭 지점 대기 시간 (초)
+  pickupWaitTime: 0.5,  // 픽업 지점 최소 체류 (초)
+  dropoffWaitTime: 0.5, // 드롭 지점 최소 체류 (초)
   hoverHeight: 0.3,     // 바닥에서 떠 있는 높이 (m, 박스 중심 기준)
 };
 
-// 시간 가속 — Stage 7에서 슬라이더로 조정 가능하게 확장 예정.
-// updateAGVs(dt) 내부에서 dt × TIME_SCALE을 사용한다.
-export const TIME_SCALE = 1.0;
+// ===================================================================
+// Stage 4: 시뮬레이션 엔진 파라미터
+// - 각 공정(Station)별 사이클 타임·큐 용량·불량률을 한 곳에 모은다.
+// - 사이클 타임은 Stage 3에서 결정한 라인 밸런싱 값을 사용.
+// - 사출·공급은 원료가 무한 가정이므로 입력 큐 없음(null).
+// - 출하 station은 누적 카운트 용도이므로 큐 용량을 사실상 무제한으로 둠.
+// ===================================================================
+export const STATION_SPECS = {
+  'injection-1': { type: 'injection', partType: 'lens',        cycleTime: 45, outputCapacity: 4, defectRate: 0.015 },
+  'injection-2': { type: 'injection', partType: 'bezel',       cycleTime: 30, outputCapacity: 4, defectRate: 0.010 },
+  'injection-3': { type: 'injection', partType: 'housing',     cycleTime: 35, outputCapacity: 4, defectRate: 0.012 },
+  'surface':     { type: 'surface',                            cycleTime: 60, inputCapacity: 4, outputCapacity: 4, defectRate: 0.020 },
+  'assembly':    { type: 'assembly',                           cycleTime: 50, inputCapacity: 3, outputCapacity: 4, defectRate: 0.005 },
+  'shipping':    { type: 'shipping',                           cycleTime: 5,  inputCapacity: 999, outputCapacity: 999, defectRate: 0 },
+  'supply':      { type: 'supply',    partType: 'electronics', cycleTime: 20, outputCapacity: 6, defectRate: 0 },
+};
+
+// 시간 가속 슬라이더 설정
+// - defaultScale: 시연 시 자연스럽게 흐름이 보이는 기본 배속
+// - scaleOptions: 슬라이더가 취할 수 있는 단계값 (인덱스 0~5)
+export const TIME = {
+  defaultScale: 30,
+  scaleOptions: [1, 10, 30, 60, 120, 300],
+};

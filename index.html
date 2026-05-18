@@ -24,7 +24,18 @@
       <span class="title">Factory Simulator</span>
     </div>
     <div class="toolbar-right">
-      <!-- 이후 단계: 시작/일시정지, 속도 슬라이더, 카메라 프리셋 등 -->
+      <!-- Stage 4: 시뮬레이션 제어 (일시정지/리셋 + 시뮬레이션 시간 + 시간 가속 슬라이더) -->
+      <div class="time-controls">
+        <button id="btn-pause" class="ctrl-btn" title="일시정지/재생">⏸</button>
+        <button id="btn-reset" class="ctrl-btn" title="리셋">🔄</button>
+        <span class="time-display">
+          시뮬레이션 시간: <span id="sim-time">00:00:00</span>
+        </span>
+        <label class="speed-control">
+          속도: <span id="speed-display">30x</span>
+          <input type="range" id="speed-slider" min="0" max="5" value="2" step="1">
+        </label>
+      </div>
     </div>
   </header>
 
@@ -38,9 +49,9 @@
     </aside>
   </main>
 
-  <!-- 하단 상태바: 시뮬레이션 상태(Idle/Running/Paused) 표시 -->
+  <!-- 하단 상태바: 시뮬레이션 시간 · 가동 상태 · 누적 완성품 (main.js가 매 프레임 갱신) -->
   <footer id="statusbar">
-    <span>Status: Idle</span>
+    <span id="status-text">시뮬레이션 시간: 00:00:00 | 대기 중 | 누적 완성품: 0개</span>
   </footer>
 
   <script type="module" src="js/main.js"></script>
