@@ -19,10 +19,20 @@
   </script>
 </head>
 <body>
-  <!-- 상단 툴바: 좌측에 제목, 우측은 이후 컨트롤 버튼을 위한 빈 자리 -->
+  <!-- 상단 툴바: 좌측 제목 · 가운데 이벤트 트리거(Stage 7) · 우측 시뮬레이션 제어 -->
   <header id="toolbar">
     <div class="toolbar-left">
       <span class="title">Factory Simulator</span>
+    </div>
+    <div class="toolbar-center">
+      <!-- Stage 7: 수동 이벤트 트리거. 클릭 즉시 해당 station을 강제 다운타임으로 -->
+      <div class="event-controls">
+        <span class="event-controls__label">이벤트:</span>
+        <button class="event-btn" data-event-key="mold-change-1" title="사출기 #1 금형 교체 (90초 정지)">#1 금형</button>
+        <button class="event-btn" data-event-key="mold-change-2" title="사출기 #2 금형 교체 (90초 정지)">#2 금형</button>
+        <button class="event-btn" data-event-key="mold-change-3" title="사출기 #3 금형 교체 (90초 정지)">#3 금형</button>
+        <button class="event-btn" data-event-key="supply-delay"  title="전자부품 공급 지연 (60초 정지)">공급 지연</button>
+      </div>
     </div>
     <div class="toolbar-right">
       <!-- Stage 4: 시뮬레이션 제어 (일시정지/리셋 + 시뮬레이션 시간 + 시간 가속 슬라이더) -->
@@ -81,6 +91,9 @@
   <footer id="statusbar">
     <span id="status-text">시뮬레이션 시간: 00:00:00 | 대기 중 | 누적 완성품: 0개</span>
   </footer>
+
+  <!-- Stage 7: 우상단 토스트 컨테이너. events.js의 showToast가 자식 div를 append. -->
+  <div id="toast-container" class="toast-container"></div>
 
   <script type="module" src="js/main.js"></script>
 </body>

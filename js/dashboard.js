@@ -40,6 +40,9 @@ const STATUS_DISPLAY = {
   'processing': { label: '가동', class: 'processing' },
   'blocked':    { label: '정체', class: 'blocked' },
   'starved':    { label: '기아', class: 'starved' },
+  // Stage 7: 외부 이벤트로 강제 정지된 상태 (금형 교체·공급 지연·자동 다운).
+  // 'blocked'와 색·뉘앙스를 구분해서 "계획된 정지/이벤트"임을 표시한다.
+  'down':       { label: '정지', class: 'down' },
 };
 
 // 라인 전체 OEE 산정 시 제외할 station id.

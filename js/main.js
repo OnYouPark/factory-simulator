@@ -21,6 +21,7 @@ import { buildAGVs, updateAGVs } from './markers.js';
 import { createStations, updateStations } from './simulation.js';
 import { updateDashboard, resetDashboardThrottle } from './dashboard.js';
 import { initCharts, resetCharts } from './charts.js';
+import { triggerManualEvent, processAutoEvents, resetEvents } from './events.js';
 import { TIME } from './config.js';
 
 // 다른 모듈에서 import해서 사용할 수 있는 전역 상태.
@@ -136,7 +137,18 @@ document.addEventListener('DOMContentLoaded', () => {
     resetDashboardThrottle();
     // 차트 데이터(트렌드 + 게이지 비율)도 빈 상태로 되돌림. 인스턴스는 유지.
     resetCharts();
+    // 자동 이벤트 타이머·활성 다운 추적·표시된 토스트도 초기화.
+    resetEvents();
   });
+
+  // Stage 7: 이벤트 트리거 버튼. data-event-key로 MANUAL_EVENTS를 식별.
+  // factoryState.stations 를 참조해 리셋 후에도 항상 현재 station Map과 연결되도록 한다.
+  for (const btn of document.querySelectorAll('.event-btn')) {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.eventKey;
+      triggerManualEvent(key, factoryState.stations);
+    });
+  }
 
   // 7) 메인 애니메이션 루프
   // - simState.running 이 false면 시뮬레이션 갱신은 멈추되 OrbitControls/렌더는 계속.
@@ -154,6 +166,9 @@ document.addEventListener('DOMContentLoaded', () => {
       updateStations(factoryState.stations, simDelta);
       updateAGVs(factoryState.agvs, simDelta);
       updateEquipmentVisuals(equipment, factoryState.stations, realDelta);
+      // 이벤트 시스템: 활성 다운의 완료 감지(매 호출) + 자동 이벤트 추첨(60초 throttle).
+      // 일시정지 중에는 호출하지 않으므로 자동 이벤트도 자연스럽게 멈춘다.
+      processAutoEvents(factoryState.stations, simState.simulationTime);
     }
 
     // 상태바·KPI 대시보드는 일시정지 중에도 매 프레임 호출.

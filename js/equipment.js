@@ -21,6 +21,8 @@ import { EQUIPMENT, EQUIPMENT_RENDER, PART_COLORS } from './config.js';
 const STATUS_EMISSIVE = {
   blocked: 0xC0392B,
   starved: 0x6b7280,
+  // Stage 7: 강제 다운(이벤트). blocked보다 진한 적색·깜박임 없음 (계획된 정지)
+  down:    0x8B1A2B,
 };
 const PROCESSING_EMISSIVE_FACTOR = 0.30;  // 부품 색을 어둡게 해서 은은한 발광 느낌
 const BLINK_HZ = 1;                       // blocked 깜박임 주기 (초당 회수)
@@ -141,6 +143,12 @@ export function updateEquipmentVisuals(equipmentList, stations, realDeltaSeconds
       case 'starved': {
         mat.emissive.setHex(STATUS_EMISSIVE.starved);
         mat.emissiveIntensity = 0.5;
+        break;
+      }
+      case 'down': {
+        // 계획된 정지 — 깜박임 없이 정적 적색으로 표시.
+        mat.emissive.setHex(STATUS_EMISSIVE.down);
+        mat.emissiveIntensity = 0.7;
         break;
       }
       case 'idle':

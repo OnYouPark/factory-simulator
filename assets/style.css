@@ -69,6 +69,50 @@ body {
   /* Stage 4: 시뮬레이션 컨트롤이 여기에 배치된다 */
 }
 
+/* Stage 7: 가운데 이벤트 트리거 영역.
+   3-컬럼 toolbar(space-between)에서 자동으로 중앙에 자리잡는다. */
+#toolbar .toolbar-center {
+  display: flex;
+  align-items: center;
+}
+
+/* ---------- 이벤트 트리거 버튼 그룹 (Stage 7) ---------- */
+.event-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.event-controls__label {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-right: 8px;
+}
+
+.event-btn {
+  background: var(--bg-darkest);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.event-btn:hover {
+  background: #232833;
+  border-color: var(--accent);
+}
+
+.event-btn:active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 /* ---------- 시간 컨트롤 (일시정지·리셋·시간 표시·속도 슬라이더) ---------- */
 .time-controls {
   display: flex;
@@ -393,6 +437,13 @@ body {
   color: #d9c5a3;
 }
 
+/* Stage 7: 이벤트로 강제 정지된 상태. blocked보다 진한 빨강 + 깜박임 없음
+   (계획된 정지·이벤트 발생을 즉시 구분 가능). */
+.kpi-card__status--down {
+  background: #4a1820;
+  color: #ffa0a0;
+}
+
 @keyframes kpi-status-blink {
   0%, 100% { opacity: 1.0; }
   50%      { opacity: 0.5; }
@@ -428,4 +479,55 @@ body {
   user-select: none;
   pointer-events: none;
   letter-spacing: -0.02em;
+}
+
+/* ===================================================================
+   Stage 7: 토스트 알림 (우상단)
+   - showToast()가 .toast 요소를 #toast-container에 append
+   - 처음엔 opacity 0 + translateX(20px) → .toast--visible 추가 시 slide-in
+   - 4초 후 .toast--visible 제거 → slide-out, 0.3초 후 DOM 제거
+   =================================================================== */
+.toast-container {
+  position: fixed;
+  top: calc(var(--toolbar-height) + 20px);   /* 툴바 바로 아래 */
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+  pointer-events: none;   /* 토스트 영역을 뚫고 캔버스 클릭 가능 */
+}
+
+.toast {
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  min-width: 200px;
+  max-width: 320px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: auto;
+}
+
+.toast--visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* 유형별 좌측 보더 강조 — 정보/경고/오류 한눈에 구분 */
+.toast--info {
+  border-left: 4px solid var(--accent);
+}
+
+.toast--warning {
+  border-left: 4px solid #E67E22;
+}
+
+.toast--error {
+  border-left: 4px solid #C0392B;
 }

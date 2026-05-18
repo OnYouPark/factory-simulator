@@ -50,7 +50,15 @@ export class Station {
     // ---------- 처리 상태 ----------
     this.currentItem = null;
     this.processingProgress = 0;       // 누적 처리 시간 (초)
-    this.status = 'idle';              // 'idle' | 'processing' | 'blocked' | 'starved'
+    this.status = 'idle';              // 'idle' | 'processing' | 'blocked' | 'starved' | 'down'
+
+    // ---------- 강제 다운타임 (Stage 7) ----------
+    // 외부 이벤트(수동 버튼 또는 자동 발생)로 station을 계획적으로 정지시킨다.
+    //   - forcedDown: true 인 동안 update()는 부품 처리를 멈추고 downTime만 누적
+    //   - forcedDownReason: 토스트·UI 표시용 (예: '#1 금형 교체', '공급 지연', '자동 다운')
+    this.forcedDown = false;
+    this.forcedDownRemaining = 0;
+    this.forcedDownReason = null;
 
     // ---------- KPI 원천 통계 ----------
     // 시뮬레이션 시간(초) 단위로 누적. Stage 5의 KPI 대시보드는 이 값을
@@ -71,6 +79,23 @@ export class Station {
    */
   update(deltaSeconds) {
     this.stats.loadedTime += deltaSeconds;
+
+    // 0) 강제 다운타임이 활성이면 사이클은 전부 멈추고 downTime만 누적.
+    //    잔여 시간이 0 이하가 되면 자동 해제되어 다음 프레임의 tryStartNextCycle로
+    //    자연스럽게 복귀한다 (status='idle' 로 두면 일반 흐름이 알아서 처리).
+    if (this.forcedDown) {
+      this.forcedDownRemaining -= deltaSeconds;
+      this.stats.downTime += deltaSeconds;
+      if (this.forcedDownRemaining <= 0) {
+        this.forcedDown = false;
+        this.forcedDownRemaining = 0;
+        this.forcedDownReason = null;
+        this.status = 'idle';
+      } else {
+        this.status = 'down';
+      }
+      return;
+    }
 
     // 1) 현재 처리 중이면 진행도 누적, 완료되면 출력 큐로 이동
     if (this.status === 'processing') {
@@ -178,6 +203,26 @@ export class Station {
       this.inputQueues[part.type].push(part);
     } else {
       this.inputQueues.push(part);
+    }
+  }
+
+  /**
+   * Stage 7: 외부 이벤트로 강제 다운타임을 트리거한다.
+   * - 처리 중이던 부품은 폐기 (현실적: 금형 교체 시 사이클 중단되어 재료 손실).
+   * - 출력 큐의 이미 만들어진 부품들은 그대로 둔다 (AGV가 픽업 가능).
+   * - 이미 forcedDown 중이면 시간을 덮어쓰지 않고 호출자가 가드해야 한다 (events.js에서 처리).
+   *
+   * @param {number} durationSeconds - 정지 지속 시간 (시뮬레이션 시간 기준)
+   * @param {string} reason - 정지 사유 표시용 라벨
+   */
+  triggerDowntime(durationSeconds, reason) {
+    this.forcedDown = true;
+    this.forcedDownRemaining = durationSeconds;
+    this.forcedDownReason = reason;
+    this.status = 'down';
+    if (this.currentItem) {
+      this.currentItem = null;
+      this.processingProgress = 0;
     }
   }
 
