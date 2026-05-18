@@ -6,13 +6,15 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 
 import { CAMERA, COLORS, LIGHTING, CONTROLS } from './config.js';
 
 /**
  * Three.js 씬 셋업.
  * @param {HTMLElement} container - renderer.domElement를 append할 컨테이너
- * @returns {{scene, camera, renderer, controls}} 메인 루프에서 쓰는 객체들
+ * @returns {{scene, camera, renderer, controls, labelRenderer}} 메인 루프에서 쓰는 객체들
+ *   labelRenderer는 장비 라벨(CSS2DObject) 렌더링용. WebGL 캔버스 위에 absolute로 겹친다.
  */
 export function setupScene(container) {
   // ---------- 씬 ----------
@@ -85,6 +87,19 @@ export function setupScene(container) {
   sc.updateProjectionMatrix();
   scene.add(directional);
 
+  // ---------- 라벨 렌더러 (CSS2DRenderer) ----------
+  // 장비 위에 떠 있는 한국어 라벨을 그리기 위한 별도 렌더러.
+  // - WebGL 캔버스와 같은 영역을 차지하지만, 실제로는 DOM(div)을 3D 좌표에 맞춰 배치한다.
+  // - pointer-events: none → OrbitControls 마우스 이벤트가 캔버스에 그대로 전달된다.
+  const labelRenderer = new CSS2DRenderer();
+  labelRenderer.setSize(width, height);
+  const lrEl = labelRenderer.domElement;
+  lrEl.style.position = 'absolute';
+  lrEl.style.top = '0';
+  lrEl.style.left = '0';
+  lrEl.style.pointerEvents = 'none';
+  container.appendChild(lrEl);
+
   // ---------- 리사이즈 핸들러 ----------
   window.addEventListener('resize', () => {
     const w = container.clientWidth || 1;
@@ -92,7 +107,8 @@ export function setupScene(container) {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
+    labelRenderer.setSize(w, h);
   });
 
-  return { scene, camera, renderer, controls };
+  return { scene, camera, renderer, controls, labelRenderer };
 }
