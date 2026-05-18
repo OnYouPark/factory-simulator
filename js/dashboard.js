@@ -1,12 +1,11 @@
 // ===================================================================
-// Stage 5: KPI 계산 + 우측 패널 텍스트 표시
+// Stage 6: KPI 계산 + 우측 패널 시각화 (텍스트 + Chart.js)
 //
-// - Station.stats(=Stage 4에서 누적된 원천 데이터)를 JIPM 한국식 OEE 공식으로
-//   가공해 우측 패널에 실시간 표시한다.
-// - 시각화(게이지·차트)는 Stage 6의 몫. 이번 단계는 텍스트 기반.
+// - Stage 5의 텍스트 KPI는 그대로 유지하면서 카드 우측에 미니 도넛 게이지를 부착하고,
+//   상단에는 메인 반원 게이지, 그 아래에 5분 트렌드 라인 차트를 함께 갱신한다.
+// - 차트 인스턴스 자체는 charts.js가 관리. 이 파일은 KPI 값을 만들어 넘기는 역할만.
 // - 일시정지 중에도 마지막 KPI를 유지한다 (realDelta 기반 throttle을 쓰되,
-//   값 자체는 Station.stats를 그대로 읽으므로 simulation이 멈춰 있으면 값이
-//   변하지 않고 자연스럽게 동결된다).
+//   값은 Station.stats를 그대로 읽으므로 simulation이 멈춰 있으면 자연스럽게 동결).
 //
 // 공식 정리:
 //   시간가동률 = operatingTime / (operatingTime + downTime)
@@ -15,12 +14,16 @@
 //   OEE       = 시간가동률 × 성능가동률 × 양품률
 //
 //   라인 전체 OEE = supply·shipping 제외 station들의 OEE 산술 평균
-//   (시연 단순성 우선; 가중 평균은 추후 단계에서 도입)
 // ===================================================================
 
+import {
+  initMiniGauge,
+  updateMiniGauge,
+  updateOverallGauge,
+  recordTrendSample,
+} from './charts.js';
+
 // ---------- 표시 정보 매핑 ----------
-// 한글 라벨은 config의 EQUIPMENT.name과 의도적으로 약간 다르게 둠
-// (대시보드는 한 줄 텍스트로 압축; 3D 라벨은 두 줄 가독성 우선).
 const STATION_DISPLAY_NAMES = {
   'injection-1': '사출기 #1 (렌즈)',
   'injection-2': '사출기 #2 (베젤)',
@@ -50,34 +53,25 @@ const CARD_ORDER = [
   'surface', 'assembly', 'shipping', 'supply',
 ];
 
-// 화면 업데이트 throttle. 매 프레임 DOM을 만지면 성능·가독성 모두 손해.
-const UPDATE_INTERVAL = 0.5;   // 초
+// 화면 업데이트 throttle. 매 프레임 DOM·차트를 만지면 성능·가독성 모두 손해.
+const UPDATE_INTERVAL = 0.5;   // 초 (실시간 기준)
 let _accumulator = 0;          // realDelta 누적 (호출 사이에 유지)
 
 /**
- * 단일 Station의 KPI 4종을 계산해 반환한다.
- * 시뮬레이션 시작 직후(분모 0)에도 NaN/Infinity가 새지 않도록 각 분기에서
- * 안전한 fallback 을 둔다.
- *
+ * 단일 Station의 KPI 4종 계산. 분모 0 케이스는 안전한 fallback 으로 NaN 방지.
  * @param {import('./simulation.js').Station} station
  * @returns {{availability: number, performance: number, quality: number, oee: number}}
- *   모두 0..1 사이 비율. UI 표시 시 ×100 한다.
  */
 export function calculateKPIs(station) {
   const { operatingTime, downTime, producedCount, goodCount } = station.stats;
 
-  // 시간가동률: 부하 시간 = operatingTime + downTime.
-  // 분모 0(아직 한 번도 갱신 안 된 첫 프레임)은 100%로 둠 — "아직 손실 없음".
   const denom = operatingTime + downTime;
   const availability = denom > 0 ? operatingTime / denom : 1.0;
 
-  // 성능가동률: 실제 가동 시간 대비 표준 사이클로 만들어졌어야 할 수량 비율.
-  // 1.0을 초과하면(아주 짧은 시간에 우연히 producedCount가 앞서가는 경우) 1.0으로 cap.
   const performance = operatingTime > 0
     ? Math.min(1.0, (station.cycleTime * producedCount) / operatingTime)
     : 0;
 
-  // 양품률: 아직 1개도 생산 안 된 시점은 100%로 둠 — "불량 발생 안 함".
   const quality = producedCount > 0 ? goodCount / producedCount : 1.0;
 
   const oee = availability * performance * quality;
@@ -85,48 +79,48 @@ export function calculateKPIs(station) {
 }
 
 /**
- * 매 프레임 main.js에서 호출. 내부적으로 0.5초마다만 DOM을 갱신한다.
- * 시뮬레이션이 일시정지여도 realDelta는 흐르므로 표시 직후 정지 시 마지막 값이 그대로 남는다.
+ * 매 프레임 main.js에서 호출. 내부적으로 0.5초마다 DOM·차트를 갱신한다.
  *
  * @param {Map<string, import('./simulation.js').Station>} stations
  * @param {number} realDelta - 실제 시간 경과(초). simState.timeScale 영향 안 받음.
+ * @param {number} simulationTime - 시뮬레이션 누적 시간(초). 트렌드 샘플의 x축 라벨용.
  */
-export function updateDashboard(stations, realDelta) {
+export function updateDashboard(stations, realDelta, simulationTime = 0) {
   _accumulator += realDelta;
   if (_accumulator < UPDATE_INTERVAL) return;
   _accumulator = 0;
 
-  _renderOverall(stations);
+  const lineOEE = _computeLineOEE(stations);
+  _renderOverall(lineOEE);
   _renderCards(stations);
+
+  // 트렌드 차트 — 시뮬레이션 시간 기준으로 샘플링 (일시정지 중엔 자연스럽게 멈춤)
+  recordTrendSample(simulationTime, lineOEE);
 }
 
-/** 라인 전체 OEE 갱신. supply·shipping 제외 station들의 OEE 산술 평균. */
-function _renderOverall(stations) {
-  const overallEl = document.getElementById('overall-oee');
-  if (!overallEl) return;
-
-  const active = [];
+/** supply·shipping 제외 station들의 OEE 산술 평균. 활성 station이 없으면 0. */
+function _computeLineOEE(stations) {
+  let sum = 0;
+  let count = 0;
   for (const station of stations.values()) {
     if (EXCLUDE_FROM_LINE_OEE.includes(station.id)) continue;
-    active.push(station);
+    sum += calculateKPIs(station).oee;
+    count += 1;
   }
+  return count > 0 ? sum / count : 0;
+}
 
-  if (active.length === 0) {
-    overallEl.textContent = '—';
-    return;
-  }
-
-  let sum = 0;
-  for (const s of active) sum += calculateKPIs(s).oee;
-  const lineOEE = sum / active.length;
-
-  overallEl.textContent = `${(lineOEE * 100).toFixed(1)}%`;
+/** 메인 게이지·중앙 텍스트 갱신. */
+function _renderOverall(lineOEE) {
+  const overallEl = document.getElementById('overall-oee');
+  if (overallEl) overallEl.textContent = `${(lineOEE * 100).toFixed(1)}%`;
+  updateOverallGauge(lineOEE);
 }
 
 /**
  * 각 station 카드 렌더링.
- * - 컨테이너에 카드가 없으면 CARD_ORDER 순서로 만들고
- * - 이후엔 같은 DOM 노드를 재사용해서 textContent만 바꾼다 (DOM thrash 최소화).
+ * - 컨테이너에 카드가 없으면 CARD_ORDER 순서로 만들고 미니 게이지를 부착
+ * - 이후엔 같은 DOM 노드를 재사용해서 textContent + 게이지 데이터만 바꿈
  */
 function _renderCards(stations) {
   const container = document.getElementById('station-kpis');
@@ -140,6 +134,10 @@ function _renderCards(stations) {
     if (!card) {
       card = _createStationCard(id);
       container.appendChild(card);
+      // 카드 DOM이 트리에 들어간 직후 mini gauge 인스턴스를 부착.
+      // (Chart.js는 canvas의 부모 크기를 측정하므로 DOM 부착 후가 안전)
+      const canvasEl = card.querySelector('canvas[data-mini-gauge]');
+      if (canvasEl) initMiniGauge(id, canvasEl);
     }
     _updateStationCard(card, station);
   }
@@ -148,6 +146,8 @@ function _renderCards(stations) {
 /**
  * 카드 DOM 한 번만 생성. 이후엔 update만 호출.
  * innerHTML은 정적 한글 텍스트 + 상수 id만 들어가므로 안전.
+ *
+ * 레이아웃: 좌측 = 이름·텍스트 지표 4종 / 우측 = 미니 게이지(가운데 OEE %) + 상태 배지
  */
 function _createStationCard(id) {
   const card = document.createElement('div');
@@ -155,22 +155,27 @@ function _createStationCard(id) {
   card.dataset.stationId = id;
   const name = STATION_DISPLAY_NAMES[id] || id;
   card.innerHTML = `
-    <header class="kpi-card__header">
-      <span class="kpi-card__name">${name}</span>
-      <span class="kpi-card__status"></span>
-    </header>
-    <dl class="kpi-card__metrics">
-      <dt>시간가동률</dt><dd data-metric="availability">—</dd>
-      <dt>성능가동률</dt><dd data-metric="performance">—</dd>
-      <dt>양품률</dt><dd data-metric="quality">—</dd>
-      <dt class="kpi-card__oee-label">OEE</dt><dd class="kpi-card__oee-value" data-metric="oee">—</dd>
-      <dt>누적 생산</dt><dd data-metric="produced">0개</dd>
-    </dl>
+    <div class="kpi-card__main">
+      <div class="kpi-card__name">${name}</div>
+      <dl class="kpi-card__metrics">
+        <dt>시간가동률</dt><dd data-metric="availability">—</dd>
+        <dt>성능가동률</dt><dd data-metric="performance">—</dd>
+        <dt>양품률</dt><dd data-metric="quality">—</dd>
+        <dt>누적 생산</dt><dd data-metric="produced">0개</dd>
+      </dl>
+    </div>
+    <div class="kpi-card__side">
+      <div class="kpi-card__gauge-wrap">
+        <canvas data-mini-gauge></canvas>
+        <span class="kpi-card__oee-text" data-metric="oee">—</span>
+      </div>
+      <span class="kpi-card__status">—</span>
+    </div>
   `;
   return card;
 }
 
-/** 기존 카드의 텍스트·상태 배지만 갱신한다. */
+/** 기존 카드의 텍스트·상태 배지·미니 게이지를 갱신. */
 function _updateStationCard(card, station) {
   const kpis = calculateKPIs(station);
   const statusInfo = STATUS_DISPLAY[station.status] || { label: '—', class: 'idle' };
@@ -180,22 +185,25 @@ function _updateStationCard(card, station) {
   statusEl.textContent = statusInfo.label;
   statusEl.className = `kpi-card__status kpi-card__status--${statusInfo.class}`;
 
+  // 좌측 텍스트 지표 4종
   card.querySelector('[data-metric="availability"]').textContent =
     `${(kpis.availability * 100).toFixed(1)}%`;
   card.querySelector('[data-metric="performance"]').textContent =
     `${(kpis.performance * 100).toFixed(1)}%`;
   card.querySelector('[data-metric="quality"]').textContent =
     `${(kpis.quality * 100).toFixed(1)}%`;
-  card.querySelector('[data-metric="oee"]').textContent =
-    `${(kpis.oee * 100).toFixed(1)}%`;
   card.querySelector('[data-metric="produced"]').textContent =
     `${station.stats.producedCount}개`;
+
+  // 우측 미니 게이지 + 가운데 OEE 텍스트
+  card.querySelector('[data-metric="oee"]').textContent =
+    `${(kpis.oee * 100).toFixed(0)}%`;
+  updateMiniGauge(station.id, kpis.oee);
 }
 
 /**
- * Stage 4의 리셋 버튼이 stations Map을 새 인스턴스로 갈아끼우는 흐름과 잘 맞물리도록,
- * 다음 updateDashboard 호출에서 즉시 갱신이 일어나도록 throttle을 0으로 되돌리는 헬퍼.
- * (선택 사용 — main.js에서 리셋 시 호출하면 사용자 체감이 더 자연스러워진다.)
+ * 리셋 직후 한 프레임 안에 KPI 표시가 0으로 동기화되도록 throttle을 강제 만료.
+ * main.js의 리셋 핸들러에서 호출.
  */
 export function resetDashboardThrottle() {
   _accumulator = UPDATE_INTERVAL;

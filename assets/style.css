@@ -199,28 +199,79 @@ body {
   text-align: left;
 }
 
-/* 상단의 라인 전체 OEE — 큰 숫자 한 개를 강조 */
+/* 상단의 라인 전체 OEE — 반원 게이지 + 가운데 % 텍스트 오버레이 */
 .overall-kpi {
   background: var(--bg-darkest);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 16px;
+  padding: 20px;
   margin-bottom: 16px;
   text-align: center;
 }
 
+.overall-kpi__gauge-wrap {
+  position: relative;
+  width: 100%;
+  height: 130px;
+}
+
+.overall-kpi__gauge-wrap canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* 반원 게이지 가운데(반원 안쪽 하단)에 라벨·% 텍스트 오버레이 */
+.overall-kpi__center {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+}
+
 .overall-kpi__label {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
 }
 
 .overall-kpi__value {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
   color: var(--accent);
-  margin-top: 4px;
+  margin-top: 2px;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+/* ---------- 트렌드 라인 차트 ---------- */
+.trend-chart {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.trend-chart__title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.trend-chart__wrap {
+  position: relative;
+  width: 100%;
+  height: 100px;
+}
+
+.trend-chart__wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 /* 개별 station 카드 컨테이너 — 세로 flex로 카드들을 쌓음 */
@@ -230,30 +281,85 @@ body {
   gap: 10px;
 }
 
-/* ---------- 개별 KPI 카드 ---------- */
+/* ---------- 개별 KPI 카드 (Stage 6: 좌측 텍스트 + 우측 미니 게이지/배지) ---------- */
 .kpi-card {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 12px;
+  /* 좌: 1fr (이름·지표), 우: 70px (미니 게이지·상태 배지) */
+  display: grid;
+  grid-template-columns: 1fr 70px;
+  gap: 10px;
+  align-items: center;
 }
 
-.kpi-card__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  gap: 8px;
+.kpi-card__main {
+  min-width: 0;  /* grid 자식의 overflow 처리를 위해 필요 */
 }
 
 .kpi-card__name {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text);
-  /* 카드 폭이 좁을 때 이름이 길면 잘리지 않게 줄임표 처리 */
+  margin-bottom: 6px;
+  /* 카드 폭이 좁을 때 이름이 길면 줄임표 처리 */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 지표 표 — dt/dd 를 2열 그리드로 좌우 배치 */
+.kpi-card__metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 8px;
+  margin: 0;
+}
+
+.kpi-card__metrics dt {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.kpi-card__metrics dd {
+  font-size: 11px;
+  color: var(--text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 우측 컬럼: 미니 게이지 위, 상태 배지 아래로 세로 정렬 */
+.kpi-card__side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 미니 도넛 게이지 래퍼 + 가운데 OEE % 텍스트 오버레이 */
+.kpi-card__gauge-wrap {
+  position: relative;
+  width: 60px;
+  height: 60px;
+}
+
+.kpi-card__gauge-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.kpi-card__oee-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  pointer-events: none;
 }
 
 /* 상태 배지 (pill 모양). 상태별 색은 modifier 클래스로 교체. */
@@ -262,7 +368,6 @@ body {
   padding: 2px 8px;
   border-radius: 999px;
   white-space: nowrap;
-  /* 기본값은 idle 톤. modifier가 덮어쓴다. */
   background: var(--bg-darkest);
   color: var(--text-muted);
 }
@@ -280,7 +385,6 @@ body {
 .kpi-card__status--blocked {
   background: #5a2d2d;
   color: #d9a3a3;
-  /* 1초 주기 깜박임. 시각적 강조 — 정체된 공정을 즉시 인지 가능. */
   animation: kpi-status-blink 1s infinite;
 }
 
@@ -292,36 +396,6 @@ body {
 @keyframes kpi-status-blink {
   0%, 100% { opacity: 1.0; }
   50%      { opacity: 0.5; }
-}
-
-/* 지표 표 — dt/dd 를 2열 그리드로 좌우 배치 */
-.kpi-card__metrics {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px 12px;
-}
-
-.kpi-card__metrics dt {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.kpi-card__metrics dd {
-  font-size: 12px;
-  color: var(--text);
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-/* OEE 행만 강조 (라벨·값 모두 accent + bold) */
-.kpi-card__oee-label {
-  color: var(--accent) !important;
-  font-weight: 600;
-}
-
-.kpi-card__oee-value {
-  color: var(--accent) !important;
-  font-weight: 600;
 }
 
 /* ---------- 하단 상태바 ---------- */

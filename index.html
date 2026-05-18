@@ -12,7 +12,8 @@
   {
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+      "chart.js/auto": "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/+esm"
     }
   }
   </script>
@@ -45,15 +46,30 @@
       <!-- scene.js에서 생성한 renderer.domElement가 이 안에 append 된다 -->
     </div>
     <aside id="side-panel">
-      <!-- Stage 5: KPI 대시보드 (텍스트 기반). Stage 6에서 게이지·차트로 확장됨. -->
+      <!-- Stage 6: KPI 대시보드 (텍스트 + 게이지 + 트렌드 차트). -->
       <div id="dashboard">
         <h2 class="dashboard__title">KPI Dashboard</h2>
 
+        <!-- 메인 반원 게이지: 라인 전체 OEE를 시각화 -->
         <section class="overall-kpi">
-          <div class="overall-kpi__label">라인 전체 OEE</div>
-          <div class="overall-kpi__value" id="overall-oee">—</div>
+          <div class="overall-kpi__gauge-wrap">
+            <canvas id="overall-oee-gauge"></canvas>
+            <div class="overall-kpi__center">
+              <div class="overall-kpi__label">라인 전체 OEE</div>
+              <div class="overall-kpi__value" id="overall-oee">—</div>
+            </div>
+          </div>
         </section>
 
+        <!-- 5분 슬라이딩 윈도우 트렌드 -->
+        <section class="trend-chart">
+          <h3 class="trend-chart__title">최근 5분 추이</h3>
+          <div class="trend-chart__wrap">
+            <canvas id="trend-chart-canvas"></canvas>
+          </div>
+        </section>
+
+        <!-- station별 카드 (좌측 텍스트 KPI + 우측 미니 게이지/상태 배지) -->
         <section class="station-kpis" id="station-kpis">
           <!-- dashboard.js가 STATION_SPECS 기반으로 카드 7개를 동적으로 생성 -->
         </section>

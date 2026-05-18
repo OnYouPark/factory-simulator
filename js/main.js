@@ -20,6 +20,7 @@ import { buildEquipment, updateEquipmentVisuals } from './equipment.js';
 import { buildAGVs, updateAGVs } from './markers.js';
 import { createStations, updateStations } from './simulation.js';
 import { updateDashboard, resetDashboardThrottle } from './dashboard.js';
+import { initCharts, resetCharts } from './charts.js';
 import { TIME } from './config.js';
 
 // 다른 모듈에서 import해서 사용할 수 있는 전역 상태.
@@ -41,6 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('[main] #canvas-container 요소를 찾을 수 없습니다.');
     return;
   }
+
+  // 0) 차트 인스턴스 초기화 (메인 반원 게이지·트렌드 라인). 미니 게이지는
+  //    dashboard.js가 카드를 만들 때마다 부착하므로 여기선 정적 차트만.
+  initCharts();
 
   // 1) 씬 셋업
   const { scene, camera, renderer, controls, labelRenderer } = setupScene(container);
@@ -129,6 +134,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 리셋 직후 한 프레임 안에 KPI 표시가 0%로 동기화되도록 throttle을 강제 만료시킴.
     resetDashboardThrottle();
+    // 차트 데이터(트렌드 + 게이지 비율)도 빈 상태로 되돌림. 인스턴스는 유지.
+    resetCharts();
   });
 
   // 7) 메인 애니메이션 루프
@@ -154,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // - KPI 대시보드: 내부 throttle(0.5초)로 자체 조절. 시뮬레이션이 멈춰 있으면
     //   Station.stats가 변하지 않으므로 표시 값이 자연스럽게 동결됨.
     updateStatusBar();
-    updateDashboard(factoryState.stations, realDelta);
+    updateDashboard(factoryState.stations, realDelta, simState.simulationTime);
 
     controls.update();
     renderer.render(scene, camera);
