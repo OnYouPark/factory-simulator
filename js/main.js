@@ -19,6 +19,7 @@ import { buildFactory } from './factory.js';
 import { buildEquipment, updateEquipmentVisuals } from './equipment.js';
 import { buildAGVs, updateAGVs } from './markers.js';
 import { createStations, updateStations } from './simulation.js';
+import { updateDashboard, resetDashboardThrottle } from './dashboard.js';
 import { TIME } from './config.js';
 
 // 다른 모듈에서 import해서 사용할 수 있는 전역 상태.
@@ -125,6 +126,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     factoryState.stations = stations;
     factoryState.agvs = agvs;
+
+    // 리셋 직후 한 프레임 안에 KPI 표시가 0%로 동기화되도록 throttle을 강제 만료시킴.
+    resetDashboardThrottle();
   });
 
   // 7) 메인 애니메이션 루프
@@ -145,8 +149,12 @@ document.addEventListener('DOMContentLoaded', () => {
       updateEquipmentVisuals(equipment, factoryState.stations, realDelta);
     }
 
-    // 상태바는 일시정지 시에도 텍스트가 "일시정지"로 갱신되도록 매 프레임 호출.
+    // 상태바·KPI 대시보드는 일시정지 중에도 매 프레임 호출.
+    // - 상태바: "일시정지" 텍스트로 즉시 전환되도록.
+    // - KPI 대시보드: 내부 throttle(0.5초)로 자체 조절. 시뮬레이션이 멈춰 있으면
+    //   Station.stats가 변하지 않으므로 표시 값이 자연스럽게 동결됨.
     updateStatusBar();
+    updateDashboard(factoryState.stations, realDelta);
 
     controls.update();
     renderer.render(scene, camera);

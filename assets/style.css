@@ -186,17 +186,142 @@ body {
 #side-panel {
   background: var(--panel);
   border-left: 1px solid var(--border);
-  overflow-y: auto;
+  overflow-y: auto;       /* 카드가 많아져 잘리면 세로 스크롤 */
   padding: 16px;
 }
 
-.panel-placeholder {
-  color: var(--text-muted);
-  font-size: 13px;
+/* ---------- Stage 5: KPI 대시보드 ---------- */
+.dashboard__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+/* 상단의 라인 전체 OEE — 큰 숫자 한 개를 강조 */
+.overall-kpi {
+  background: var(--bg-darkest);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
   text-align: center;
-  padding: 24px 0;
-  border: 1px dashed var(--border);
-  border-radius: 4px;
+}
+
+.overall-kpi__label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.overall-kpi__value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* 개별 station 카드 컨테이너 — 세로 flex로 카드들을 쌓음 */
+.station-kpis {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ---------- 개별 KPI 카드 ---------- */
+.kpi-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.kpi-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.kpi-card__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  /* 카드 폭이 좁을 때 이름이 길면 잘리지 않게 줄임표 처리 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 상태 배지 (pill 모양). 상태별 색은 modifier 클래스로 교체. */
+.kpi-card__status {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  /* 기본값은 idle 톤. modifier가 덮어쓴다. */
+  background: var(--bg-darkest);
+  color: var(--text-muted);
+}
+
+.kpi-card__status--idle {
+  background: var(--bg-darkest);
+  color: var(--text-muted);
+}
+
+.kpi-card__status--processing {
+  background: #2d5a3d;
+  color: #a3d9b1;
+}
+
+.kpi-card__status--blocked {
+  background: #5a2d2d;
+  color: #d9a3a3;
+  /* 1초 주기 깜박임. 시각적 강조 — 정체된 공정을 즉시 인지 가능. */
+  animation: kpi-status-blink 1s infinite;
+}
+
+.kpi-card__status--starved {
+  background: #5a4d2d;
+  color: #d9c5a3;
+}
+
+@keyframes kpi-status-blink {
+  0%, 100% { opacity: 1.0; }
+  50%      { opacity: 0.5; }
+}
+
+/* 지표 표 — dt/dd 를 2열 그리드로 좌우 배치 */
+.kpi-card__metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+}
+
+.kpi-card__metrics dt {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.kpi-card__metrics dd {
+  font-size: 12px;
+  color: var(--text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* OEE 행만 강조 (라벨·값 모두 accent + bold) */
+.kpi-card__oee-label {
+  color: var(--accent) !important;
+  font-weight: 600;
+}
+
+.kpi-card__oee-value {
+  color: var(--accent) !important;
+  font-weight: 600;
 }
 
 /* ---------- 하단 상태바 ---------- */
