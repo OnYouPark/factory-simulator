@@ -11,8 +11,8 @@
 ## 진행 단계 (MVP)
 
 - [x] Stage 0+1: 셋업 + 공장 외곽
-- [ ] Stage 2: 장비 배치
-- [ ] Stage 3: AGV·자재 마커
+- [x] Stage 2: 장비 배치
+- [~] Stage 3: AGV·자재 마커 (진행 중, 미커밋)
 - [ ] Stage 4: 시뮬레이션 엔진
 - [ ] Stage 5: KPI 계산
 - [ ] Stage 6: 대시보드 UI

@@ -144,3 +144,68 @@ export const EQUIPMENT_RENDER = {
   metalness: 0.2,
   labelYOffset: 0.5,  // 박스 상단으로부터 라벨이 떠 있을 거리 (m)
 };
+
+// ===================================================================
+// Stage 3: AGV·자재 흐름 관련 상수
+// - 부품 색상은 라인별 식별성을 위해 명확히 구분
+// - 라우트는 'pickup → (경유) → drop → returnTo' 순환 구조
+// - 시간은 모두 초 단위, 거리는 모두 m
+// ===================================================================
+
+// 부품 종류별 색상 (AGV 위 부품 표시·바닥 경로 점선·향후 자재 마커에 공통 사용)
+export const PART_COLORS = {
+  lens:        0x7DB7C4,  // 하늘색
+  bezel:       0xBFA980,  // 베이지 (사출기 #2 회색과 구분)
+  housing:     0x1A3A6B,  // 짙은 파랑
+  electronics: 0xC0392B,  // 빨강
+  completed:   0xD4A017,  // 황금 (조립 완료품)
+};
+
+// AGV 운반 경로 정의
+// - waypoints: 픽업 지점에서 시작해 드롭 지점까지 이어지는 장비 id 시퀀스
+// - returnTo: 드롭 후 복귀할 장비 id (보통 픽업 지점과 동일)
+// - 한 라우트당 AGV 1대가 배정된다.
+export const ROUTES = [
+  {
+    id: 'lens-loop',
+    partType: 'lens',
+    waypoints: ['injection-1', 'surface', 'assembly'],
+    returnTo: 'injection-1',
+  },
+  {
+    id: 'bezel-loop',
+    partType: 'bezel',
+    waypoints: ['injection-2', 'assembly'],
+    returnTo: 'injection-2',
+  },
+  {
+    id: 'housing-loop',
+    partType: 'housing',
+    waypoints: ['injection-3', 'assembly'],
+    returnTo: 'injection-3',
+  },
+  {
+    id: 'electronics-loop',
+    partType: 'electronics',
+    waypoints: ['supply', 'assembly'],
+    returnTo: 'supply',
+  },
+  {
+    id: 'shipping-loop',
+    partType: 'completed',
+    waypoints: ['assembly', 'shipping'],
+    returnTo: 'assembly',
+  },
+];
+
+// AGV 공통 파라미터
+export const AGV = {
+  speed: 3.0,           // m/s
+  pickupWaitTime: 2.0,  // 픽업 지점 대기 시간 (초)
+  dropoffWaitTime: 2.0, // 드롭 지점 대기 시간 (초)
+  hoverHeight: 0.3,     // 바닥에서 떠 있는 높이 (m, 박스 중심 기준)
+};
+
+// 시간 가속 — Stage 7에서 슬라이더로 조정 가능하게 확장 예정.
+// updateAGVs(dt) 내부에서 dt × TIME_SCALE을 사용한다.
+export const TIME_SCALE = 1.0;
