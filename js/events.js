@@ -20,14 +20,16 @@ export const MANUAL_EVENTS = {
 };
 
 // ---------- 자동 이벤트 설정 ----------
-// enabled를 false로 두면 자동 이벤트 완전 정지 (시연 중 거슬릴 때 임시 비활성용).
+// 기본 비활성 — 시연·관찰 시 라인 OEE가 자동 다운으로 과도하게 떨어지는 것을 막는다.
+// (이전 5%/분 × 5 station 설정에서 시뮬 2시간 누적 시 OEE 3% 수준까지 하락하는 문제가 있었음)
+// 자동 이벤트가 필요한 경우 enabled를 true로 변경.
 // 출하·공급은 자동 다운 대상에서 제외 — supply는 수동 '공급 지연' 전용, shipping은
 // 사실상 무한 용량이라 다운 시연 가치가 없다.
 export const AUTO_EVENT_CONFIG = {
-  enabled: true,
+  enabled: false,
   checkIntervalSeconds: 60,
-  perStationProbability: 0.05,
-  durationRange: [30, 90],
+  perStationProbability: 0.01,   // 활성 시에도 보수적 (1%/분)
+  durationRange: [30, 60],       // 최대 지속을 90→60으로 단축
   applicableStations: ['injection-1', 'injection-2', 'injection-3', 'surface', 'assembly'],
 };
 

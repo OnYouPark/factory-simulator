@@ -112,7 +112,10 @@ export function initCharts() {
               color: '#9ca3af',
               font: { size: 10 },
               maxRotation: 0,
-              autoSkipPadding: 12,
+              // 60포인트(=5분 윈도우)에서 라벨이 겹치지 않도록 최대 6개만 표시.
+              // autoSkip을 명시해 Chart.js가 자동으로 솎아내게 한다.
+              maxTicksLimit: 6,
+              autoSkip: true,
             },
             grid: { color: 'rgba(255,255,255,0.05)' },
           },
